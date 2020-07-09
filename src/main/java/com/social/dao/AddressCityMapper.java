@@ -19,4 +19,6 @@ public interface AddressCityMapper {
     int updateByPrimaryKey(AddressCity record);
 
     List<AddressCity> selectByCode(@Param("code") String code);
+    
+     int update(AddressCity record);
 }
