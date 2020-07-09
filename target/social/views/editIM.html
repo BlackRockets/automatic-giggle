@@ -1,0 +1,560 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>编辑信息</title>
+		<link rel="stylesheet" type="text/css" href="../static/css/reset.css"/>
+		<link rel="stylesheet" type="text/css" href="../static/css/editIM.css"/>
+		<link rel="stylesheet" href="../static/css/calendar.css" />
+
+		<script src="../static/js/jquery.js"></script>
+		<script type="text/javascript" src="../static/js/calendar.js"></script>
+		<script src="../static/js/editIM.js"></script>
+		<script src="../static/js/checkUpdateIM.js"></script>
+		<script type="text/javascript" src="../static/js/checkUserUpdateForm.js" charset="utf-8"></script>
+		<script src="https://cdn.staticfile.org/angular.js/1.4.6/angular.min.js"></script>
+<style>
+	html,body{height: 100%}
+</style>
+<script type="text/javascript">
+		var app= angular.module("myapp",[]);
+		app.controller('myController',function($scope,$http) {
+
+
+
+			//根据农作物种类Id查询所有品种
+			$scope.changeCropCategory = function(){
+				var id = $scope.sampleInfoVOs.cropCategoryId;
+				$http({
+					url:'/findCropSpeciesByCropCategoryId',
+					method:"get",
+					params: {
+						cropCategoryId:id,
+					}
+				}).success(function (data) {
+					$scope.cropSpeciess = data;
+				})
+			}
+
+			//市
+			$scope.provinceChange = function(){
+				var code = $scope.sampleInfoVOs.province;
+				$http({
+					url:"/getCity",
+					method:"get",
+					params:{
+						code:code
+					},
+				}).success(function (data) {
+					$scope.citys = data;
+				})
+			}
+
+			//区
+			$scope.cityChange = function(){
+				var code = $scope.sampleInfoVOs.city;
+				$http({
+					url:"/getTown",
+					method:"get",
+					params: {
+						code:code,
+					},
+				}).success(function (data) {
+					$scope.towns = data;
+				})
+			}
+
+			//查询回显
+			var url = window.location.search;
+			var id = url.substring(url.indexOf('=')+1,url.length);
+			$http({
+				url:'/findForEdit',
+				method:'get',
+				params:{
+					id:id,
+				}
+			}).success(function (data) {
+				$scope.sampleInfoVOs = data;
+				var sampleToxinVOList = $scope.sampleInfoVOs.sampleToxinVOList;
+				var bacterialStrainInfoList = $scope.sampleInfoVOs.bacterialStrainInfoList;
+				var harvestTime = $scope.sampleInfoVOs.harvestTime;
+				var samplingTime = $scope.sampleInfoVOs.samplingTime;
+				$scope.sampleInfoVOs.harvestTime = new Date(harvestTime).format('yyyy-mm-dd');
+				$scope.sampleInfoVOs.samplingTime = new Date(samplingTime).format('yyyy-mm-dd');
+
+				//查询农作物种类
+				$http({
+					url:"/findAllCropCategory",
+					method:"get",
+				}).success(function (data) {
+					$scope.cropCategories = data;
+				})
+				//遍历select 和主表信息对比
+				var cropCategory = $scope.sampleInfoVOs.cropCategory;
+				$("#cptype").each(function () {
+					var value = $(this).text();
+					if(cropCategory == value){
+						$(this).attr('selected','selected')
+					}
+				})
+
+				//根据农作物种类Id查询所有品种 再和主表存储品种对比
+				var id = $scope.sampleInfoVOs.cropCategoryId;
+				$http({
+					url:'/findCropSpeciesByCropCategoryId',
+					method:"get",
+					params: {
+						cropCategoryId:id,
+					}
+				}).success(function (data) {
+					$scope.cropSpeciess = data;
+				})
+				var cropSpecies = $scope.sampleInfoVOs.cropSpecies;
+				$("#cptypess").each(function () {
+					var value = $(this).text();
+					if(cropSpecies == value){
+						$(this).attr('selected','selected');
+					}
+				})
+
+				//省
+				$http({
+					url:"/getAddress",
+					method:"get",
+				}).success(function (data) {
+					$scope.provinces = data;
+					var province = $scope.sampleInfoVOs.province;
+					$("#shen").each(function () {
+						var value = $(this).val();
+						if(province == value){
+							$(this).attr('selected','selected');
+						}
+					})
+
+					//市
+					$http({
+						url:"/getCity",
+						method:"get",
+						params:{
+							code:province,
+						},
+					}).success(function (data) {
+						$scope.citys = data;
+						var city = $scope.sampleInfoVOs.city;
+						$("#shi").each(function () {
+							var value = $(this).val();
+							if(city == value){
+								$(this).attr('selected','selected');
+							}
+						})
+
+						//区
+						$http({
+							url:"/getTown",
+							method:"get",
+							params: {
+								code:city,
+							},
+						}).success(function (data) {
+							$scope.towns = data;
+							var town = $scope.sampleInfoVOs.county;
+							$("#xian").each(function () {
+								var value = $(this).val();
+								if(town == value){
+									$(this).attr('selected','selected');
+								}
+							})
+						})
+					})
+				})
+				//拼接毒素信息框 并且回显信息
+				var selectId = 1;
+
+				for(var i=0;i<sampleToxinVOList.length;i++){
+					var toxinCount = sampleToxinVOList[i].toxinCount;
+					$('.addds').append('<li class="edittable-middle">' +
+							'<div class="editmiddle-left">毒素信息</div>' +
+							'<div class="editmiddle-right"><ul><li>' +
+
+							'<lable>毒素种类</lable>' +
+							'<select class="toxin_id'+selectId+'"  name="toxinId" id="toxin_id'+selectId+'" ng-model="sampleToxins" onblur="checktoxin_id()">' +
+							'<option value="" >请选择</option>' +
+							'</select><span id="toxin_id" ></span></li><li><lable>毒素含量</lable>' +
+							'<input name="id" type="hidden" value="'+ sampleToxinVOList[i].id+ '"  />' +
+							'<input name="toxinCount" type="text" value="'+ toxinCount+ '"  onblur="checktoxin_count()"  maxlength="10" placeholder="毒素含量最大可输入十位"/>' +
+							'<span id="toxin_count" ></span></li><li><a class="del">删除</a></li></ul></div></li>');
+
+					selectId += 1;
+				}
+				$http({
+					url:"/getSampleToxin",
+					method:"get",
+				}).success(function(data){
+					var idd = selectId-1;
+					for (var a = 1;a<=idd;a++){
+						var type = sampleToxinVOList[a-1].toxinType;
+						for (var b = 0; b < data.length; b++){
+							if(type==data[b].toxinType){
+								$('#toxin_id'+a+'').append("<option selected='selected' value='"+data[b].id+"'>"+data[b].toxinType+"</option>")
+							}else {
+								$('#toxin_id'+a+'').append("<option value='"+data[b].id+"'>"+data[b].toxinType+"</option>")
+							}
+
+						}
+
+					}
+				})
+
+
+				//拼接产毒菌株信息框 并且回显信息
+				var character = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
+				for(var j=0;j<bacterialStrainInfoList.length;j++){
+					$(".add-con").append("<li class='edittable-bottom'>" +
+							"<div class='editbottom-left'>产毒菌株信息"+character[j]+"</div>" +
+							"<div class='editbottom-right'><ul><li>" +
+							"<lable>样品编号</lable><input id='sample_num'   value='"+bacterialStrainInfoList[j].sampleNum+"' name='sample_num' type='text' class='sample' readonly='readonly' value='"+$('.ypbh').val()+"'/></li><li>" +
+							"<lable>菌株原始编号</lable><input name='original_num' type='text'  value='"+bacterialStrainInfoList[j].originalNum+"'  class='num'/><span class='err'></span></li><li class='form-a'>" +
+							"<lable>文献信息</lable>" +
+							"<input name='bacterialStrainid' type='hidden' value='"+bacterialStrainInfoList[j].id+"'/>" +
+							"<a class='xz-btn-a'>选择文件</a> <input type='text' name='' id='' value='"+bacterialStrainInfoList[j].wordAddr+"' class='file-name-a'  readonly='readonly' placeholder='仅支持doc/docx格式文档'/>" +
+							"<input onchange='getPhotoSizes(this)' name='word_addr' type='file'  class='file-info-a' accept='.doc,.docx'/></li><li class='form-c'>" +
+							"<lable>文本信息</lable>" +
+							"<a class='xz-btn-c'>选择文件</a> <input   type='text' name='' id='' value='"+bacterialStrainInfoList[j].txtAddr+"' class='file-name-c'  readonly='readonly' placeholder='仅支持txt格式'/>" +
+							"<input onchange='getTextSize(this)' name='txt_addr' type='file' class='file-info-c' accept='.txt'/></li><li class='form-b'>" +
+							"<lable>图片信息</lable>" +
+							"<a class='xz-btn-b'>选择文件</a> <input type='text' name='' id='' value='"+bacterialStrainInfoList[j].pictureAddr+"' class='file-name-b'  readonly='readonly' placeholder='仅支持jpg/png格式'/>" +
+							"<input onchange='getPhotoSize(this)' name='picture_addr' type='file' class='file-info-b' accept='.png,.jpg,.jpeg'/></li><li><a class='del'>删除</a></li></ul></div></li>");
+				}
+
+			})
+
+
+			//更新信息
+			$scope.updateInfo = function () {
+				//采样信息
+				var formData = $scope.sampleInfoVOs;
+				formData.samplingTime= new Date($("[name=sampling_time]").val());
+				formData.harvestTime= new Date($("[name=harvest_time]").val());
+
+				//毒素信息
+				var idArray = new Array();
+				var toxinIdArray = new Array();
+				var toxinCountArray = new Array();
+
+				var ids = $("[name=id]");
+				var toxinIds = $("[name=toxinId]");
+				var toxinCounts = $("[name=toxinCount]")
+
+				//菌株原始编号
+				var bacterialStrainidArray = new Array();
+				var bacterialStrainids = $("[name=bacterialStrainid]")
+				var originalNumArray = new Array();
+				var originalNums = $("[name=original_num]")
+
+				for(var i=0;i<ids.length;i++){
+					idArray.push(ids[i].value);
+				}
+				for(var i=0;i<toxinIds.length;i++){
+					toxinIdArray.push(toxinIds[i].value);
+				}
+				for(var j=0;j<toxinCounts.length;j++){
+					toxinCountArray.push(toxinCounts[j].value);
+				}
+				for(var j=0;j<originalNums.length;j++){
+					originalNumArray.push(originalNums[j].value);
+				}
+				for(var j=0;j<bacterialStrainids.length;j++){
+					bacterialStrainidArray.push(bacterialStrainids[j].value);
+				}
+
+				formData.idList = idArray;
+				formData.toxinIdList = toxinIdArray;
+				formData.toxinCountList = toxinCountArray;
+				formData.originalNumList = originalNumArray;
+				formData.bacterialStrainidList = bacterialStrainidArray;
+
+				//文件信息
+				/*var sampleIInfoData = new FormData();
+
+
+				var word_addrs = $("input[name='word_addr']");
+				var txt_addrs = $("input[name='txt_addr']");
+				var picture_addrs = $("input[name='picture_addr']");
+
+
+				//现在要求三个文件框都必须上传文件，所以三个数组的长度是一样的
+				for(var j=0;j<word_addrs.length;j++){
+					if(word_addrs[j].value.length > 0){
+						sampleIInfoData.append("wordFile",word_addrs[j].files[0]);
+					}
+					if(txt_addrs[j].value.length > 0) {
+						sampleIInfoData.append("txtFile", txt_addrs[j].files[0]);
+					}
+					if(picture_addrs[j].value.length > 0) {
+						sampleIInfoData.append("pictureFile", picture_addrs[j].files[0]);
+					}
+				}*/
+
+				//sampleIInfoData.append("sampleInfoDTO",angular.toJson(formData));
+				$http({
+					url:"/updateBatch",
+					method:"post",
+					data: formData,
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					// 对请求参数的解析(去除外层括号)
+					transformRequest: function(obj) {
+						var str = [];
+						for (var p in obj) {
+							str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+						}
+						return str.join("&");
+					},
+				}).success(function (data) {
+
+				}).error(function (data) {
+
+				})
+
+
+			}
+
+
+
+		})
+</script>
+	</head>
+	<body ng-app="myapp" ng-controller="myController">
+		<div class="contaner">
+
+			<div class="im-content">
+				<div class="im-heade">
+					<div class="imhead-title">当前页面：<a>修改信息</a></div>
+				</div>
+	<form action="editinformation" id="search_form" enctype="multipart/form-data" method="post" accept-charset="utf-8">
+				<div class="editim-table">
+					<ul class="table-con">
+						<li class="edittable-top">
+							<div class="edittable-left">采样信息</div>
+							<div class="edittable-right">
+								<ul>
+
+									<li>
+										<lable>样品编号</lable>
+										<input ng-model="sampleInfoVOs.sampleId" value="{{sampleInfoVOs.sampleId}}" placeholder="首字母为英文，长度为5-15位" class="ypbh" type="">
+										<input value="{{sampleInfoVOs.id}}"  type="hidden">
+										<span id="sample_id"></span>
+									</li>
+									<li>
+									<input value="19" type="hidden">
+										<lable>农产品加工原料类别</lable>
+										<select ng-change="changeCropCategory()" class="sel"  ng-model="sampleInfoVOs.cropCategoryId"  ng-options="cropCategory1.id as cropCategory1.cropCategory for cropCategory1 in cropCategories" name="crop_category_id" id="cptype">
+
+										</select>
+										<span id="crop_category_id"></span>
+									</li>
+									<li>
+										<lable>品种</lable>
+										<select ng-model="sampleInfoVOs.breed" ng-options="cropSpecy.id as cropSpecy.cropSpecies for cropSpecy in cropSpeciess" name="breed" class="sele" id="cptypess">
+											<option value="">请选择</option>
+										</select>
+										<span id="breed"></span>
+									</li>
+									<li>
+										<div class="width">
+											 <lable>地点</lable>
+							  <input value="北京" id="shengs" type="hidden">
+							  <input value="北京市" id="shisss" type="hidden">
+							  <input value="东城区" id="xiansss" type="hidden">
+							  <input value="北京" name="province" id="provinces" type="hidden">
+							  <input value="北京市" name="city" id="city" type="hidden">
+							  <input value="东城区" name="county" id="county" type="hidden">
+							   <input value="123" id="wsx" type="hidden">
+	                             <select class="province" id="shen" ng-change="provinceChange()" ng-model="sampleInfoVOs.province" ng-options="province1.code as province1.name for province1 in provinces">
+				        			 <option class="shengde" selected="selected" value="110000">北京</option>
+								 </select><span>省</span>
+				        		 <select class="city" onblur="checkprovince()" ng-change="cityChange()" ng-model="sampleInfoVOs.city" ng-options="city1.code as city1.name for city1 in citys" id="shi"  >
+									 <option value="">请选择</option>
+									<option class="shide" selected="selected" value="110100">北京市</option>
+								 </select><span>市</span>
+				        		 <select onblur="checkprovince()" class="county" ng-model="sampleInfoVOs.county" id="xian" ng-options="town1.code as town1.name for town1 in towns">
+									 <option value="">请选择</option>
+								 </select><span>县</span>
+										</div>
+										<span class="xc">
+											<input ng-model="sampleInfoVOs.township"  value="{{sampleInfoVOs.township}}" placeholder="可为空" id="xiang" name="township" type="text">乡
+											<input ng-model="sampleInfoVOs.village"  value="{{sampleInfoVOs.village}}" placeholder="可为空" id="cun" name="village" type="text">村
+											<input ng-model="sampleInfoVOs.household"  value="{{sampleInfoVOs.household}}" placeholder="可为空" id="hu" name="household"  type="text"><span>户</span>
+										</span>
+										<span id="province"></span>
+									</li>
+									<li>
+										<lable>收获时间</lable>
+										<input ng-model="sampleInfoVOs.harvestTime" value="{{sampleInfoVOs.harvestTime}}" name="harvest_time"  id="dt" placeholder="选择日期" readonly="readonly" type="text">
+  										<div style="width: 280px; height: 330px; left: 549.65px; top: 357px; z-index: 999; display: none;" class="calendar calendar-modal calendar-d" id="dd"><div style="width: 280px;" class="calendar-inner"><div class="calendar-views"><div style="width: 280px;" class="view view-date"><div class="calendar-hd"><a href="javascript:;" data-calendar-display-date="" class="calendar-display">2018/<span class="m">3</span></a><div class="calendar-arrow"><span class="prev" title="上一月" data-calendar-arrow-date="">&lt;</span><span class="next" title="下一月" data-calendar-arrow-date="">&gt;</span></div></div><div style="width: 280px; height: 280px;" class="calendar-ct"><ol class="week"><li style="width:40px;height:40px;line-height:40px">日</li><li style="width:40px;height:40px;line-height:40px">一</li><li style="width:40px;height:40px;line-height:40px">二</li><li style="width:40px;height:40px;line-height:40px">三</li><li style="width:40px;height:40px;line-height:40px">四</li><li style="width:40px;height:40px;line-height:40px">五</li><li style="width:40px;height:40px;line-height:40px">六</li></ol><ul class="date-items"><li style="width: 280px;"><ol class="days"><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">29</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">30</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">31</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">7</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">8</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">9</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">10</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">11</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">12</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">13</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">14</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">15</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">16</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">17</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">18</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">19</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">20</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">21</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">22</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">23</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">24</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">7</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">8</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">9</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">10</li></ol></li><li style="width: 280px;"><ol class="days"><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">7</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">8</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">9</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">10</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">11</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">12</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">13</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">14</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">15</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">16</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">17</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">18</li><li style="width:40px;height:40px;line-height:40px" class=" now" data-calendar-day="">19</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">20</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">21</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">22</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">23</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">24</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">29</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">30</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">31</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">7</li></ol></li><li style="width: 280px;"><ol class="days"><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">29</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">30</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">31</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">7</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">8</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">9</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">10</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">11</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">12</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">13</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">14</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">15</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">16</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">17</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">18</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">19</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">20</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">21</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">22</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">23</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">24</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">29</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">30</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">5</li></ol></li></ul></div></div><div style="width: 280px;" class="view view-month"><div class="calendar-hd"><a href="javascript:;" data-calendar-display-month="" class="calendar-display">2018</a><div class="calendar-arrow"><span class="prev" title="上一年" data-calendar-arrow-month="">&lt;</span><span class="next" title="下一年" data-calendar-arrow-month="">&gt;</span></div></div><ol style="width: 280px; height: 280px;" class="calendar-ct month-items"><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">1月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">2月</li><li class="now" style="width:70px;height:70px;line-height:70px" data-calendar-month="">3月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">4月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">5月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">6月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">7月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">8月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">9月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">10月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">11月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">12月</li></ol></div></div></div><div class="calendar-label"><p>HelloWorld</p><i></i></div></div>
+										<span id="harvest_time"></span>
+									</li>
+									<li>
+										<lable>取样时间</lable>
+										<input ng-model="sampleInfoVOs.samplingTime"  value="{{sampleInfoVOs.samplingTime}}"  name="sampling_time"  id="dt-b" placeholder="选择日期" readonly="readonly" type="text">
+  										<div style="width: 280px; height: 330px; left: 549.65px; top: 401px; z-index: 999; display: none;" class="calendar calendar-modal calendar-d" id="dd-b"><div style="width: 280px;" class="calendar-inner"><div class="calendar-views"><div style="width: 280px;" class="view view-date"><div class="calendar-hd"><a href="javascript:;" data-calendar-display-date="" class="calendar-display">2018/<span class="m">3</span></a><div class="calendar-arrow"><span class="prev" title="上一月" data-calendar-arrow-date="">&lt;</span><span class="next" title="下一月" data-calendar-arrow-date="">&gt;</span></div></div><div style="width: 280px; height: 280px;" class="calendar-ct"><ol class="week"><li style="width:40px;height:40px;line-height:40px">日</li><li style="width:40px;height:40px;line-height:40px">一</li><li style="width:40px;height:40px;line-height:40px">二</li><li style="width:40px;height:40px;line-height:40px">三</li><li style="width:40px;height:40px;line-height:40px">四</li><li style="width:40px;height:40px;line-height:40px">五</li><li style="width:40px;height:40px;line-height:40px">六</li></ol><ul class="date-items"><li style="width: 280px;"><ol class="days"><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">29</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">30</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">31</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">7</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">8</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">9</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">10</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">11</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">12</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">13</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">14</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">15</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">16</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">17</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">18</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">19</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">20</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">21</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">22</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">23</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">24</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">7</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">8</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">9</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">10</li></ol></li><li style="width: 280px;"><ol class="days"><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">7</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">8</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">9</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">10</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">11</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">12</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">13</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">14</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">15</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">16</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">17</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">18</li><li style="width:40px;height:40px;line-height:40px" class=" now" data-calendar-day="">19</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">20</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">21</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">22</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">23</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">24</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">29</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">30</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">31</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">7</li></ol></li><li style="width: 280px;"><ol class="days"><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">29</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">30</li><li style="width:40px;height:40px;line-height:40px" class="old" data-calendar-day="">31</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">5</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">6</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">7</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">8</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">9</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">10</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">11</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">12</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">13</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">14</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">15</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">16</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">17</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">18</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">19</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">20</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">21</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">22</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">23</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">24</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">25</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">26</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">27</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">28</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">29</li><li style="width:40px;height:40px;line-height:40px" class="" data-calendar-day="">30</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">1</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">2</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">3</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">4</li><li style="width:40px;height:40px;line-height:40px" class="new" data-calendar-day="">5</li></ol></li></ul></div></div><div style="width: 280px;" class="view view-month"><div class="calendar-hd"><a href="javascript:;" data-calendar-display-month="" class="calendar-display">2018</a><div class="calendar-arrow"><span class="prev" title="上一年" data-calendar-arrow-month="">&lt;</span><span class="next" title="下一年" data-calendar-arrow-month="">&gt;</span></div></div><ol style="width: 280px; height: 280px;" class="calendar-ct month-items"><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">1月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">2月</li><li class="now" style="width:70px;height:70px;line-height:70px" data-calendar-month="">3月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">4月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">5月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">6月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">7月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">8月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">9月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">10月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">11月</li><li style="width:70px;height:70px;line-height:70px" data-calendar-month="">12月</li></ol></div></div></div><div class="calendar-label"><p>HelloWorld</p><i></i></div></div>
+
+									</li>
+									<li>
+										<lable>取样人</lable>
+										<input ng-model="sampleInfoVOs.samplingPeople" value="{{sampleInfoVOs.samplingPeople}}" placeholder="请输入取样人姓名" name="sampling_people"  value="刘德辉李忠博" type="">
+										<span id="sampling_people"></span>
+									</li>
+									<li class="jijie">
+										<lable>采集季节及气候特征</lable>
+										<textarea ng-model="sampleInfoVOs.seasonal" value="{{sampleInfoVOs.seasonal}}" name="seasonal" id="seasonal1" rows="" cols="">阿萨德</textarea>
+										<span id="seasonal"></span>
+									</li>
+									<li class="huanjing">
+										<lable>采集地、环境信息描述</lable>
+										<textarea ng-model="sampleInfoVOs.description" value="{{sampleInfoVOs.description}}"  name="description" id="description1" rows="" cols="">阿萨德</textarea>
+										<span id="description"></span>
+									</li>
+									<li>
+										<lable>真菌污染率</lable>
+										<input ng-model="sampleInfoVOs.pollutionRate" value="{{sampleInfoVOs.pollutionRate}}"  name="pollution_rate"   type="">
+										<span id="pollution_rate"></span>
+									</li>
+								</ul>
+							</div>
+						</li>
+						<div class="addds">
+
+						</div>
+						<div class="add-dsxx">+添加毒素信息</div>
+						<div class="add-con">
+
+						</div>
+					</ul>
+					<div class="add-ds">+添加产毒菌株信息</div>
+					<div class="footer">
+						<a class="baocun" ng-click="updateInfo()">修改</a>
+						<a onclick="history.go(-1)" class="marginl" href="javascript:if(confirm('确实要放弃操作吗?返回之后，所添加数据不会保存！'))location='/glory/rest/iddeleteyangpin?id=754'">返回</a>
+					</div>
+				</div>
+			</form>
+			</div>
+		</div>
+		</div>
+	</body>
+
+
+
+<!--	<script>
+
+	function getPhotoSize(obj){
+    photoExt=obj.value.substr(obj.value.lastIndexOf(".")).toLowerCase();//获得文件后缀名
+    console.log(photoExt);
+     if(photoExt!='.png' && photoExt!='.jpg'){
+        alert("请上传正确的照片格式!");
+         obj.value = "";
+        console.log(obj.value);
+        return false;
+    }
+    var fileSize = 0;
+    var isIE = /msie/i.test(navigator.userAgent) && !window.opera;
+    if (isIE && !obj.files) {
+         var filePath = obj.value;
+         var fileSystem = new ActiveXObject("Scripting.FileSystemObject");
+         var file = fileSystem.GetFile (filePath);
+         fileSize = file.Size;
+    }else {
+         fileSize = obj.files[0].size;
+    }
+    fileSize=Math.round(fileSize/1024*100)/100; //单位为KB
+
+
+}
+
+function getPhotoSizes(obj){
+    photoExt=obj.value.substr(obj.value.lastIndexOf(".")).toLowerCase();//获得文件后缀名
+     if(photoExt!='.doc' && photoExt!='.docx'){
+        alert("请上传正确的文档格式!");
+         obj.value = "";
+        console.log(obj.value);
+        return false;
+    }
+    var fileSize = 0;
+    var isIE = /msie/i.test(navigator.userAgent) && !window.opera;
+    if (isIE && !obj.files) {
+         var filePath = obj.value;
+         var fileSystem = new ActiveXObject("Scripting.FileSystemObject");
+         var file = fileSystem.GetFile (filePath);
+         fileSize = file.Size;
+    }else {
+         fileSize = obj.files[0].size;
+    }
+    fileSize=Math.round(fileSize/1024*100)/100; //单位为KB
+
+
+}
+
+function getTextSize(obj){
+// 	alert("校验txt");
+    photoExt=obj.value.substr(obj.value.lastIndexOf(".")).toLowerCase();//获得文件后缀名
+     if(photoExt!='.txt'){
+        alert("请上传正确的文档格式!");
+         obj.value = "";
+        console.log(obj.value);
+        return false;
+    }
+    var fileSize = 0;
+    var isIE = /msie/i.test(navigator.userAgent) && !window.opera;
+    if (isIE && !obj.files) {
+         var filePath = obj.value;
+         var fileSystem = new ActiveXObject("Scripting.FileSystemObject");
+         var file = fileSystem.GetFile (filePath);
+         fileSize = file.Size;
+    }else {
+         fileSize = obj.files[0].size;
+    }
+    fileSize=Math.round(fileSize/1024*100)/100; //单位为KB
+
+
+}
+function cptypes(){
+		    var oSelect = document.getElementById('cptype');
+            var cid = oSelect.value;
+
+		if(cid != ""){
+
+				$.ajax({
+				 type:"POST",   //http请求方式
+				 url:"selectidtype", //发送给服务器的url
+				 dataType:"json",    //传参类型
+				 data:{cid:cid},
+				 success: function(cc) {
+
+					if($(".selec").length == "0"){
+						$("#cptypess").append("<option class='selec' value='' >"+"请选择"+"</option>");
+						 for(var i=0 ;i<cc.length ;i++){
+
+						 	$("#cptypess").append(
+						 		"<option class='cpzl'  value='" +cc[i].id+ "' >"+cc[i].crop_species+"</option>"
+						 	);
+						 }
+					}else{
+						$(".selec").remove();
+							$("#cptypess").append("<option class='selec' value='' >"+"请选择"+"</option>");
+						 for(var i=0 ;i<cc.length ;i++){
+
+						 	$("#cptypess").append(
+						 		"<option class='selec'  value='" +cc[i].id+ "' >"+cc[i].crop_species+"</option>"
+						 	);
+						 }
+
+					}
+				 }
+			 });
+		}else{
+			alert("强选择原料类别！！！");
+		}
+	}
+
+	</script>-->
+</html>

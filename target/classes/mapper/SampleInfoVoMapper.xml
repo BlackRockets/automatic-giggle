@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.social.dao.SampleInfoVoMapper">
+  <resultMap id="BaseResultMap" type="com.social.pojo.SampleInfoVO">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="sample_id" jdbcType="VARCHAR" property="sampleId" />
+    <result column="province" jdbcType="VARCHAR" property="province" />
+    <result column="city" jdbcType="VARCHAR" property="city" />
+    <result column="county" jdbcType="VARCHAR" property="county" />
+    <result column="harvest_time" jdbcType="TIMESTAMP" property="harvestTime" />
+    <result column="sampling_time" jdbcType="TIMESTAMP" property="samplingTime" />
+    <result column="pollution_rate" jdbcType="REAL" property="pollutionRate" />
+    <result column="crop_species" jdbcType="VARCHAR" property="cropSpecies" />
+    <result column="toxin_type" jdbcType="VARCHAR" property="toxinType" />
+  </resultMap>
+  <select id="selectSampleInfoVO" resultMap="BaseResultMap">
+ SELECT s.id ,s.sample_id,s.harvest_time,s.sampling_time,s.pollution_rate,cs.crop_species ,
+    ap.name as province ,ac.`name` as city  ,at.`name` as county
+    FROM sample_info s ,crop_species cs ,address_province ap,address_city ac,address_town at
+    WHERE  s.breed = cs.id
+    AND s.province = ap.`code` and s.city = ac.`code` and s.county = at.`code` and s.isdel = 0
+  </select>
+
+
+<select id="selectSampleInfoByIds" resultMap="BaseResultMap">
+     SELECT distinct s.id ,s.sample_id,s.harvest_time,s.sampling_time,s.pollution_rate,cs.crop_species ,
+        ap.name as province ,ac.`name` as city  ,at.`name` as county
+        FROM sample_info s ,sample_toxin st,sample_toxin_info sti,crop_species cs ,address_province ap,address_city ac,address_town at
+        WHERE s.id = st.sample_info_id AND st.toxin_id = sti.id AND s.breed = cs.id
+        AND s.province = ap.`code` and s.city = ac.`code` and s.county = at.`code` and s.isdel = 0
+        and s.id in
+        <foreach collection="array" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+
+</select>
+    <select id="selectSampleInfoById" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT distinct s.id ,s.sample_id,s.harvest_time,s.sampling_time,s.pollution_rate,cs.crop_species ,
+        ap.name as province ,ac.`name` as city  ,at.`name` as county
+        FROM sample_info s ,sample_toxin st,sample_toxin_info sti,crop_species cs ,address_province ap,address_city ac,address_town at
+        WHERE s.id = st.sample_info_id AND st.toxin_id = sti.id AND s.breed = cs.id
+        AND s.province = ap.`code` and s.city = ac.`code` and s.county = at.`code` and s.isdel = 0
+        and s.id = #{id}
+    </select>
+
+
+    <select id="selectSampleToxinByLike" resultMap="BaseResultMap" parameterType="com.social.pojo.SampleInfoDTO">
+        SELECT distinct s.id ,s.sample_id,s.harvest_time,s.sampling_time,s.pollution_rate,cs.crop_species ,
+        ap.name as province ,ac.`name` as city  ,at.`name` as county
+        FROM sample_info s ,sample_toxin st,sample_toxin_info sti,crop_species cs ,address_province ap,address_city ac,address_town at
+        WHERE s.id = st.sample_info_id AND st.toxin_id = sti.id AND s.breed = cs.id
+        AND s.province = ap.`code` and s.city = ac.`code` and s.county = at.`code` and s.isdel = 0
+        <if test="sampleId !=null and sampleId !=''">
+          and  s.sample_id like concat('%',#{sampleId},'%')
+        </if>
+        <if test="pollutionRate !=null and pollutionRate !=''">
+           and  s.pollution_rate between #{pollutionRateleft} and #{pollutionRateright}
+        </if>
+       <if test="date !=null and date !=''">
+          and  s.create_time like #{date}
+        </if>
+        <if test="province !=null and province !=''">
+            and s.province=#{province}
+        </if>
+        <if test="city !=null and city !=''">
+            and s.city=#{city}
+        </if>
+        <if test="town !=null and town !=''">
+            and s.county=#{town}
+        </if>
+        <if test="crop !=null and crop !=''">
+            and cs.id=#{crop}
+        </if>
+        limit #{startRow},#{pageSize}
+
+    </select>
+
+    <select id="selectCount" resultType="INT" >
+        SELECT count(*) from(
+        SELECT distinct s.id
+        FROM sample_info s ,sample_toxin st,sample_toxin_info sti,crop_species cs ,address_province ap,address_city
+        ac,address_town at
+        WHERE s.id = st.sample_info_id AND st.toxin_id = sti.id AND s.breed = cs.id
+        AND s.province = ap.`code` and s.city = ac.`code` and s.county = at.`code` and s.isdel = 0
+        <if test="sampleId !=null and sampleId !=''">
+            and s.sample_id like concat('%',#{sampleId},'%')
+        </if>
+        <if test="pollutionRate !=null and pollutionRate !=''">
+            and s.pollution_rate between #{pollutionRateleft} and #{pollutionRateright}
+        </if>
+        <if test="date !=null and date !=''">
+            and s.create_time like #{date}
+        </if>
+        <if test="province !=null and province !=''">
+            and s.province=#{province}
+        </if>
+        <if test="city !=null and city !=''">
+            and s.city=#{city}
+        </if>
+        <if test="town !=null and town !=''">
+            and s.county=#{town}
+        </if>
+        <if test="crop !=null and crop !=''">
+            and cs.id=#{crop}
+        </if>
+        ) sample
+
+    </select>
+
+</mapper>
